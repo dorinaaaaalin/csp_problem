@@ -337,6 +337,11 @@ def solve_planes(planes_problem, algo, allsolns,
     #BUILD your CSP here and store it in the varable csp
     # util.raiseNotDefined()
 
+    list_of_can_follow = [list(elem) for elem in planes_problem.can_follow]
+    for flight in planes_problem.flights:
+        list_of_can_follow.append([flight, "NOFLIGHT"])
+    list_of_can_follow.append(["NOFLIGHT", "NOFLIGHT"])
+
     required_maintenance_flights = ["NOFLIGHT"]
     required_maintenance_flights.extend(planes_problem.maintenance_flights)
     min_maintenance_frequency = planes_problem.min_maintenance_frequency
@@ -348,40 +353,27 @@ def solve_planes(planes_problem, algo, allsolns,
         legal_flights = planes_problem.can_fly(plane)
         legal_flights.append("NOFLIGHT")
         plane_scope = []
-        
         for i in range(len(legal_flights)-1):
             newVar = Variable('{}-{}'.format(plane, i+1), legal_flights)
             var_array.append(newVar)
-
             if i == 0:
                 list_of_can_start = [[elem] for elem in planes_problem.can_start(plane)]
                 list_of_can_start.append(["NOFLIGHT"])
                 constraint_list.append(TableConstraint('plane_start', [newVar], list_of_can_start))
             else:
-                list_of_can_follow = []
-                for elem in planes_problem.can_follow:
-                    if elem[0] in legal_flights and elem[1] in legal_flights:
-                        list_of_can_follow.append([elem[0], elem[1]])
-
-                for flight in planes_problem.flights:
-                    if flight in legal_flights:
-                        list_of_can_follow.append([flight, "NOFLIGHT"])
-
-                list_of_can_follow.append(["NOFLIGHT", "NOFLIGHT"])
                 constraint_list.append(TableConstraint('plane_can_follow', [oldVar, newVar], list_of_can_follow))
             oldVar = newVar
             plane_scope.append(newVar)
-
-        if len(legal_flights) > min_maintenance_frequency:
-            for i in range(len(plane_scope)-min_maintenance_frequency+1):
-                scope = plane_scope[i:i+min_maintenance_frequency]
-                constraint_list.append(NValuesConstraint('plane_min_freq', scope, required_maintenance_flights, 1, min_maintenance_frequency))
+        for i in range(len(plane_scope)-min_maintenance_frequency+1):
+            scope = plane_scope[i:i+min_maintenance_frequency]
+            constraint_list.append(NValuesConstraint('plane_min_freq', scope, required_maintenance_flights, 1, min_maintenance_frequency))
 
     constraint_list.append(checkAllFlights("plane_all_diff", var_array, planes_problem.flights))
 
     csp =  CSP("PlaneScheduling", var_array, constraint_list) #set to to your CSP 
     #invoke search with the passed parameters
     solutions, num_nodes = bt_search(algo, csp, variableHeuristic, allsolns, trace)
+
 
     #Convert each solution into a list of lists specifying a schedule
     #for each plane in the format described above.
@@ -413,5 +405,3 @@ def solve_planes(planes_problem, algo, allsolns,
 
     #then return a list containing all converted solutions
     #(i.e., a list of lists of lists)
-
-
